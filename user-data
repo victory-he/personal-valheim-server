@@ -1,0 +1,42 @@
+#!/bin/bash
+apt-get update
+apt-get upgrade
+
+#install docker engine
+apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release
+	
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+echo \
+  "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+	
+apt-get update
+apt-get -y install docker-ce docker-ce-cli containerd.io
+
+#install tools
+apt-get -y install unzip
+apt-get -y install awscli
+
+#create valheim directories and config file
+mkdir -p /etc/valheim /opt/valheim /etc/sysconfig
+echo "SERVER_NAME=EinherjiTest
+SERVER_PORT=2456
+WORLD_NAME=signalrunner
+SERVER_PASS=leviathan
+SERVER_PUBLIC=true" >> /etc/sysconfig/valheim-server
+
+#download valheim save
+aws s3 cp s3://valheim-einherji/backups/worlds-20210303-222338.zip /etc/valheim/
+unzip /etc/valheim/worlds-20210303-222338.zip -d /etc/valheim
+
+#download valheim service and start server
+curl -o /etc/systemd/system/valheim.service https://raw.githubusercontent.com/lloesche/valheim-server-docker/main/valheim.service
+systemctl daemon-reload
+systemctl enable valheim.service
+systemctl start valheim.service
