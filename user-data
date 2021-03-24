@@ -20,6 +20,7 @@ apt-get update
 apt-get -y install docker-ce docker-ce-cli containerd.io
 
 #install tools
+apt-get -y install zip
 apt-get -y install unzip
 apt-get -y install awscli
 
@@ -31,9 +32,26 @@ WORLD_NAME=signalrunner
 SERVER_PASS=leviathan
 SERVER_PUBLIC=true" >> /etc/sysconfig/valheim-server
 
+#create backup to s3 bucket script
+echo "zip -r "cronworlds.zip" "/etc/valheim/worlds/"
+aws s3 cp cronworlds.zip s3://valheim-einherji/cronbackup/cronworlds.zip" >> /etc/valheim/cronbackup.sh
+chmod +x cronbackup.sh
+
+#set time zone to Eastern
+timedatectl set-timezone America/New_York
+
+#create cronjob to schedule s3 bucket script to run everyday 12AM and 12PM
+echo "SHELL=/bin/sh
+00 00 * * * root /etc/valheim/cronbackup.sh" >> /etc/cron.d/valheim-midnight
+chmod 755 /etc/cron.d/valheim-midnight
+
+echo "SHELL=/bin/sh
+00 12 * * * root /etc/valheim/cronbackup.sh" >> /etc/cron.d/valheim-noon
+chmod 755 /etc/cron.d/valheim-noon
+
 #download valheim save
-aws s3 cp s3://valheim-einherji/backups/worlds-20210303-222338.zip /etc/valheim/
-unzip /etc/valheim/worlds-20210303-222338.zip -d /etc/valheim
+aws s3 cp s3://valheim-einherji/cronbackup/cronworlds.zip /etc/valheim/
+unzip /etc/valheim/cronworlds.zip -d /etc/valheim
 
 #download valheim service and start server
 curl -o /etc/systemd/system/valheim.service https://raw.githubusercontent.com/lloesche/valheim-server-docker/main/valheim.service
