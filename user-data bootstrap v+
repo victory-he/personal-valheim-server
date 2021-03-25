@@ -1,0 +1,64 @@
+#!/bin/bash
+apt-get update
+apt-get upgrade
+
+#install docker engine
+apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release
+	
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+echo \
+  "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+	
+apt-get update
+apt-get -y install docker-ce docker-ce-cli containerd.io
+
+#install tools
+apt-get -y install zip
+apt-get -y install unzip
+apt-get -y install awscli
+
+#create valheim directories and config file
+mkdir -p /etc/valheim /opt/valheim /etc/sysconfig /etc/valheim/backups /etc/valheim/scripts
+echo "SERVER_NAME=EinherjiPlus
+SERVER_PORT=2456
+WORLD_NAME=signalrunner
+SERVER_PASS=leviathan
+SERVER_PUBLIC=true
+VALHEIM_PLUS=true
+ADMINLIST_IDS=76561197976852571" >> /etc/sysconfig/valheim-server
+
+
+#create backup to s3 bucket script
+echo "zip -r -j /etc/valheim/backups/worlds.zip /etc/valheim/worlds/
+aws s3 cp /etc/valheim/backups/worlds.zip s3://valheim-einherji/cronbackup/worlds.zip" >> /etc/valheim/scripts/cronbackup.sh
+chmod +x /etc/valheim/scripts/cronbackup.sh
+
+#set time zone to Eastern
+timedatectl set-timezone America/New_York
+
+#create cronjob to schedule s3 bucket script to run everyday 12AM and 12PM
+echo "SHELL=/bin/sh
+00 00 * * * root /etc/valheim/scripts/cronbackup.sh" >> /etc/cron.d/valheim-midnight
+chmod 755 /etc/cron.d/valheim-midnight
+
+echo "SHELL=/bin/sh
+00 12 * * * root /etc/valheim/scripts/cronbackup.sh" >> /etc/cron.d/valheim-noon
+chmod 755 /etc/cron.d/valheim-noon
+
+#download valheim save and cleanup
+aws s3 cp s3://valheim-einherji/cronbackup/worlds.zip /etc/valheim/
+unzip /etc/valheim/worlds.zip -d /etc/valheim/worlds
+rm /etc/valheim/worlds.zip
+
+#download valheim service and start server
+curl -o /etc/systemd/system/valheim.service https://raw.githubusercontent.com/lloesche/valheim-server-docker/main/valheim.service
+systemctl daemon-reload
+systemctl enable valheim.service
+systemctl start valheim.service
