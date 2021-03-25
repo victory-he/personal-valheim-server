@@ -26,11 +26,13 @@ apt-get -y install awscli
 
 #create valheim directories and config file
 mkdir -p /etc/valheim /opt/valheim /etc/sysconfig /etc/valheim/backups /etc/valheim/scripts
-echo "SERVER_NAME=EinherjiTest
+echo "SERVER_NAME=EinherjiPlus
 SERVER_PORT=2456
 WORLD_NAME=signalrunner
 SERVER_PASS=leviathan
-SERVER_PUBLIC=true" >> /etc/sysconfig/valheim-server
+SERVER_PUBLIC=true
+ADMINLIST_IDS=76561197976852571" >> /etc/sysconfig/valheim-server
+
 
 #create backup to s3 bucket script
 echo "zip -r -j /etc/valheim/backups/worlds.zip /etc/valheim/worlds/
@@ -46,7 +48,7 @@ echo "SHELL=/bin/sh
 chmod 755 /etc/cron.d/valheim-midnight
 
 echo "SHELL=/bin/sh
-00 12 * * * root /etc/valheim/cronbackup.sh" >> /etc/cron.d/valheim-noon
+00 12 * * * root /etc/valheim/scripts/cronbackup.sh" >> /etc/cron.d/valheim-noon
 chmod 755 /etc/cron.d/valheim-noon
 
 #download valheim save and cleanup
