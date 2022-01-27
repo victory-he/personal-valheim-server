@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#install tools
+#install updates
 apt-get -y update
 apt-get -y upgrade
 apt-get -y install awscli
@@ -8,13 +8,19 @@ apt-get -y install zip
 apt-get -y install unzip
 
 #set environment variables
+ALLOC_ID= #Elastic IP alloc id
+SERVER_NAME=#Server name which will be visible in the game's GUI
+WORLD_NAME=#Name of your world save
+SERVER_PASS=#Server password
+STEAM_ID=#Optional- your Steam ID to be added to your server's admin list
+S3_BUCKET=#S3 bucket where your save will be stored
+
+
+#Script to make sure EIP is free
 INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
 MAXWAIT=3
-ALLOC_ID=$ELASTIC_IP
-
 export AWS_DEFAULT_REGION=us-east-1
 
-# Script to make sure EIP is free
 echo "Checking if EIP with ALLOC_ID[$ALLOC_ID] is free...."
 ISFREE=$(aws ec2 describe-addresses --allocation-ids $ALLOC_ID --query Addresses[].InstanceId --output text)
 STARTWAIT=$(date +%s)
@@ -61,11 +67,11 @@ SERVER_PASS=$SERVER_PASS
 SERVER_PUBLIC=true" >> /etc/sysconfig/valheim-server
 
 #add steamid to adminlist
-echo $ADMIN_ID >> /etc/valheim/adminlist.txt
+echo $STEAM_ID >> /etc/valheim/adminlist.txt
 
 #create backup to s3 bucket script
 echo "zip -r -j /etc/valheim/backups/worlds.zip /etc/valheim/worlds/
-aws s3 cp /etc/valheim/backups/worlds.zip s3://$BUCKET_NAME/backups/worlds.zip
+aws s3 cp /etc/valheim/backups/worlds.zip {$S3_BUCKET}worlds.zip
 echo "Save backed up! Date is: $(date)" >> ~/etc/valheim/backup.log" >> /etc/valheim/scripts/s3backup.sh
 chmod +x /etc/valheim/scripts/s3backup.sh
 
@@ -81,9 +87,8 @@ chmod 755 /etc/cron.d/s3backupjob
 
 
 #download initial valheim save and cleanup
-aws s3 cp s3://$BUCKET_NAME/backups/worlds.zip /etc/valheim/
+aws s3 cp {$S3_BUCKET}worlds.zip /etc/valheim/
 unzip /etc/valheim/worlds.zip -d /etc/valheim/worlds
-rm /etc/valheim/worlds.zip
 
 
 #download valheim service and start server
