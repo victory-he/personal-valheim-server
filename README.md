@@ -1,5 +1,9 @@
 # personal-valheim-server
+This is what I currently use to deploy my personal Valheim server. Right now, it's a simple bootstrap script using a Docker image hosted at: https://github.com/lloesche/valheim-server-docker, with some customizations of my own.
 
-Personal deployment using the lloesche/valheim-server Docker image.
+**How to Use**
+-WIP
 
-This is intended for use in the User Data for a Launch Template that uses Spot EC2 instances.
+**What's Next?**
+-Cloudformation Template
+-Terraform 
